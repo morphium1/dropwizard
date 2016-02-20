@@ -2,16 +2,14 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mongodb.MongoClient;
-import com.mongodb.MongoClientOptions;
-import com.mongodb.ServerAddress;
 import io.dropwizard.Application;
 import io.dropwizard.assets.AssetsBundle;
 import io.dropwizard.setup.Bootstrap;
 import io.dropwizard.setup.Environment;
-import mp.app.config.MongoConfiguration;
 import mp.app.dao.user.AccountDao;
 import mp.app.dao.user.UserDao;
-import mp.app.filter.MyHeaderFilter;
+import mp.app.filter.LoggingFilter;
+import mp.app.filter.RequestIdHeaderFilter;
 import mp.app.health.MongoHealthCheck;
 import mp.app.resources.AccountResource;
 import mp.app.resources.UserResource;
@@ -19,7 +17,6 @@ import mp.app.service.user.AccountServiceImpl;
 import mp.app.service.user.UserServiceImpl;
 import mp.app.startup.HealthcheckStartup;
 import mp.app.tasks.MyTask;
-import org.glassfish.jersey.filter.LoggingFilter;
 
 import java.util.logging.Logger;
 
@@ -34,9 +31,11 @@ public class MpApp extends Application<MpAppConfiguration> {
 
     @Override
     public void run(MpAppConfiguration configuration, Environment environment) throws Exception {
-        environment.jersey().register(new LoggingFilter(logger,true));
+        // Filter
+        environment.jersey().register(new RequestIdHeaderFilter());
+        environment.jersey().register(new LoggingFilter(logger));
 
-        MongoClient mongoClient = createMongoClient(configuration.getMongo());
+        MongoClient mongoClient = configuration.getMongoClientFactory().build();
 
         // Daos
         UserDao userDao = new UserDao(mongoClient, environment.getObjectMapper());
@@ -59,8 +58,6 @@ public class MpApp extends Application<MpAppConfiguration> {
         // Managed
         environment.lifecycle().manage(new HealthcheckStartup(environment.healthChecks()));
 
-        // Filter
-        environment.jersey().register(new MyHeaderFilter());
     }
 
     @Override
@@ -74,10 +71,4 @@ public class MpApp extends Application<MpAppConfiguration> {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
-    private MongoClient createMongoClient(MongoConfiguration mongoConfiguration) {
-        MongoClientOptions mongoClientOptions = MongoClientOptions.builder().serverSelectionTimeout(0).build();
-        ServerAddress serverAddress = new ServerAddress(mongoConfiguration.getHost(),mongoConfiguration.getPort());
-        MongoClient mongoClient = new MongoClient(serverAddress,mongoClientOptions);
-        return mongoClient;
-    }
 }
