@@ -2,6 +2,7 @@ package mp.app.filter;
 
 import org.jboss.logging.MDC;
 
+import javax.annotation.Priority;
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.ContainerResponseContext;
@@ -12,7 +13,8 @@ import java.util.UUID;
 import static mp.app.rest.Constants.REQUEST_ID;
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
-public class MyHeaderFilter implements ContainerResponseFilter, ContainerRequestFilter {
+@Priority(0)
+public class RequestIdHeaderFilter implements ContainerResponseFilter, ContainerRequestFilter {
 
 
 
